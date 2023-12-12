@@ -13,7 +13,7 @@ local FILL_BLOCKS = {
   ["minecraft:diorite"]=true,
   ["minecraft:andesite"]=true,
   ["minecraft:cobbled_deepslate"]=true,
-["minecraft:tuff"]=true,
+  ["minecraft:tuff"]=true,
   ["minecraft:dirt"]=true,
   ["ad_astra:moon_cobblestone"]=true,
   ["ad_astra:mars_cobblestone"]=true,
@@ -342,16 +342,20 @@ turtle.digDown()
 refuel()
 end
 
--- Checks if it is in the initial poisition
+-- Checks if it is in the initial position
 local function isItTheInitialPosition()
-hasBlockUp, blockInfoUp = turtle.inspectUp()
-hasBlockDown, blockInfoDown = turtle.inspectDown()
-if (blockInfo == 'reinfchest:gold_chest') and (blockInfoDown == 'minecraft:chest') then
-  INITIAL_POSITION = True
-else
-  INITIAL_POSITION = False
-end
-return INITIAL_POSITION
+  hasBlockUp, blockInfoUp = turtle.inspectUp()
+  hasBlockDown, blockInfoDown = turtle.inspectDown()
+  
+  if hasBlockUp and hasBlockDown then
+      if blockInfoUp.name == 'reinfchest:gold_chest' and blockInfoDown.name == 'minecraft:chest' then
+          return true
+      else
+          return false
+      end
+  else
+      return false
+  end
 end
 
 -- Checks coal amount in turtle inventory
@@ -386,7 +390,7 @@ for i = 1, 16 do
         repeat
           print("Error, not able to deposit in chest (maybe it is full)!")
           didItWork = turtle.dropUp()
-        until (didItWork == True)
+        until (didItWork == true)
       end
     else
       didItWork = turtle.dropDown()
@@ -396,7 +400,7 @@ for i = 1, 16 do
             repeat
               print("Error, not able to deposit in chest (maybe it is full)!")
               didItWork = turtle.dropUp()
-            until (didItWork == True)
+            until (didItWork == true)
           end
       end
     end
@@ -409,7 +413,7 @@ local function defineITER()
 if (TURTLE_SIDE == 'Left') then
   ITER = (CHUNKS_TO_MINE * 16) - 5
 else
-  ITER = (CHUNKS_TO_MINE * 16) - 1
+  ITER = CHUNKS_TO_MINE * 16
 end
 end
 
@@ -419,67 +423,67 @@ end
 -- ⭐ Main function
 -- =================================
 
-INITIAL_POSITION = isItTheInitialPosition()
-if (INITIAL_POSITION == True) then
+if (isItTheInitialPosition()) then
 
--- Get coal amount in the coal slot, if it less than a stack, it grabs more
-coal_amount_to_get = checkCoalAmount()
-while (coal_amount_to_get ~= 0) do
+  -- Get coal amount in the coal slot, if it less than a stack, it grabs more
   coal_amount_to_get = checkCoalAmount()
-  suckCoalFromChest(coal_amount_to_get)
-  refuel()
-end
+  while (coal_amount_to_get ~= 0) do
+    coal_amount_to_get = checkCoalAmount()
+    suckCoalFromChest(coal_amount_to_get)
+    refuel()
+  end
 
--- Define ITER amount
-defineITER()
+  -- Define ITER amount
+  defineITER()
 
--- Does the movement to get out of the Create machine and start mining
-if (TURTLE_SIDE == 'Left') then
-  turtle.turnLeft()
+  -- Does the movement to get out of the Create machine and start mining
+  if (TURTLE_SIDE == 'Left') then
+    turtle.turnLeft()
+    turtle.forward()
+  else
+    turtle.turnRight()
+    hasBlock = turtle.inspect()
+    if (hasBlock == true) then
+      turtle.dig()
+      turtle.forward()
+    end
+    turtle.forward()
   turtle.forward()
-else
+  end
+
+  -- Starts the mining
+  for i = 1, ITER do
+    advance()
+    inspectAround()
+    selectFillBlock()
+    turtle.placeDown()
+  end
+
+  -- Ends the mining and return to the starting point before starting mining
   turtle.turnRight()
-  hasBlock = turtle.inspect()
-  if (hasBlock == True) then
-    turtle.dig()
+  turtle.turnRight()
+  for i = 1, ITER do
     turtle.forward()
   end
-  turtle.forward()
-turtle.forward()
-end
 
--- Starts the mining
-for i = 1, ITER do
-  advance()
-  inspectAround()
-  selectFillBlock()
-  turtle.placeDown()
-end
+  -- Returns to the initial position inside the create machine
+  if (TURTLE_SIDE == 'Left') then
+    turtle.forward()
+    turtle.turnLeft()
+  else
+    turtle.forward()
+    turtle.forward()
+    turtle.turnRight()
+  end
 
--- Ends the mining and return to the starting point before starting mining
-turtle.turnRight()
-turtle.turnRight()
-for i = 1, ITER do
-  turtle.forward()
-end
+  -- Deposit items
+  depositsItems()
 
--- Returns to the initial position inside the create machine
-if (TURTLE_SIDE == 'Left') then
-  turtle.forward()
-  turtle.turnLeft()
-else
-  turtle.forward()
-  turtle.forward()
-  turtle.turnRight()
-end
+  -- Sends a redstone signal to the back of the turtle to trigger the create machine movement
+  redstone.setAnalogOutput(REDSTONE_TRANSMITTER,15)
 
--- Deposit items
-depositsItems()
-
--- Sends a redstone signal to the back of the turtle to trigger the create machine movement
-redstone.setAnalogOutput(REDSTONE_TRANSMITTER,15)
-
--- End of program
+  -- End of program
 
 else
-end 
+  print("Error, not in the correct initial position, maybe chunk reload happened!")
+end
